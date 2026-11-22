@@ -20,7 +20,8 @@ export type DocumentCategory =
   | 'surat_rujukan'
   | 'kartu_bpjs'
   | 'resume_medis'
-  | 'hasil_lab';
+  | 'hasil_lab'
+  | 'resep_obat';
 
 export interface MedicalDocument {
   id: string;
@@ -28,7 +29,9 @@ export interface MedicalDocument {
   category: DocumentCategory;
   fileName: string;
   fileUri: string;
-  content: string;
+  type: 'document' | 'image';
+  content?: string;
+  mediaUri?: string;
   sizeBytes: number;
   createdAt: number;
   isSandboxProtected: boolean;

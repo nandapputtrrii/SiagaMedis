@@ -12,9 +12,9 @@ function formatFileSize(bytes: number): string {
 }
 
 /**
- * Service untuk mengelola dokumen rekam medis pada Scoped Storage
+ * Service untuk mengelola dokumen dan media rekam medis pada Scoped Storage
  * menggunakan FileSystem.documentDirectory (terisolasi sandbox OS).
- * Mematuhi Sub-CPMK 8: Penyimpanan lokal berbasis Scoped Storage.
+ * Mematuhi Sub-CPMK 8: Penyimpanan lokal berkas & media berbasis Scoped Storage.
  */
 export const FileStorageService = {
   /**
@@ -32,7 +32,7 @@ export const FileStorageService = {
   },
 
   /**
-   * Menyimpan dokumen medis baru ke dalam Scoped Storage sandbox
+   * Menyimpan dokumen medis teks baru ke dalam Scoped Storage sandbox
    */
   async saveMedicalDocument(
     title: string,
@@ -51,6 +51,7 @@ export const FileStorageService = {
       id,
       title,
       category,
+      type: 'document',
       fileName,
       fileUri,
       content,
@@ -61,6 +62,65 @@ export const FileStorageService = {
 
     const serialized = JSON.stringify(docPayload, null, 2);
     await FileSystem.writeAsStringAsync(fileUri, serialized, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    return docPayload;
+  },
+
+  /**
+   * Menyimpan dokumen media/foto (Kamera / Galeri) ke dalam Scoped Storage sandbox.
+   * File disalin dari temporary cache ke sandbox terisolasi documentDirectory.
+   */
+  async saveMediaDocument(
+    title: string,
+    category: DocumentCategory,
+    sourceUri: string,
+    notes?: string
+  ): Promise<MedicalDocument> {
+    await this.ensureVaultDirectory();
+
+    const timestamp = Date.now();
+    const id = `media-${timestamp}`;
+    const safeTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+    // Dapatkan ekstensi file dari URI sumber
+    const extMatch = sourceUri.match(/\.([a-zA-Z0-9]+)(\?|$)/);
+    const extension = extMatch ? extMatch[1] : 'jpg';
+
+    const mediaFileName = `media_${safeTitle}_${timestamp}.${extension}`;
+    const destMediaUri = `${VAULT_DIR}${mediaFileName}`;
+
+    // Salin berkas media ke dalam direktori Scoped Storage sandbox
+    await FileSystem.copyAsync({
+      from: sourceUri,
+      to: destMediaUri,
+    });
+
+    // Dapatkan ukuran berkas media nyata
+    const fileInfo = await FileSystem.getInfoAsync(destMediaUri);
+    const mediaBytes = (fileInfo.exists && typeof fileInfo.size === 'number') ? fileInfo.size : 0;
+
+    // Simpan metadata JSON berpasangan
+    const metaFileName = `${safeTitle}_${timestamp}.json`;
+    const metaFileUri = `${VAULT_DIR}${metaFileName}`;
+
+    const docPayload: MedicalDocument = {
+      id,
+      title,
+      category,
+      type: 'image',
+      fileName: metaFileName,
+      fileUri: metaFileUri,
+      mediaUri: destMediaUri,
+      content: notes || 'Foto dokumen medis tersimpan di Scoped Storage sandbox.',
+      sizeBytes: mediaBytes,
+      createdAt: timestamp,
+      isSandboxProtected: true,
+    };
+
+    const serialized = JSON.stringify(docPayload, null, 2);
+    await FileSystem.writeAsStringAsync(metaFileUri, serialized, {
       encoding: FileSystem.EncodingType.UTF8,
     });
 
@@ -101,15 +161,22 @@ export const FileStorageService = {
   },
 
   /**
-   * Menghapus dokumen tertentu dari sandbox
+   * Menghapus dokumen tertentu dari sandbox (termasuk media fisiknya jika ada)
    */
-  async deleteMedicalDocument(fileName: string): Promise<boolean> {
+  async deleteMedicalDocument(docOrFileName: MedicalDocument | string): Promise<boolean> {
     try {
-      const fileUri = `${VAULT_DIR}${fileName}`;
-      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      const metaFileName = typeof docOrFileName === 'string' ? docOrFileName : docOrFileName.fileName;
+      const metaUri = `${VAULT_DIR}${metaFileName}`;
+
+      // Jika berupa objek MedicalDocument dengan mediaUri, hapus juga berkas medianya
+      if (typeof docOrFileName !== 'string' && docOrFileName.mediaUri) {
+        await FileSystem.deleteAsync(docOrFileName.mediaUri, { idempotent: true });
+      }
+
+      await FileSystem.deleteAsync(metaUri, { idempotent: true });
       return true;
     } catch (error) {
-      console.error(`Error deleting file ${fileName}:`, error);
+      console.error('Error deleting file:', error);
       return false;
     }
   },
@@ -133,7 +200,7 @@ export const FileStorageService = {
       return {
         totalBytes,
         formattedSize: formatFileSize(totalBytes),
-        fileCount: files.length,
+        fileCount: files.filter((f) => f.endsWith('.json')).length,
         sandboxPath: VAULT_DIR,
         isHardwareEncrypted: true,
       };
@@ -177,4 +244,3 @@ export const FileStorageService = {
     return [sample1, sample2, sample3];
   },
 };
-

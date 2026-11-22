@@ -40,7 +40,6 @@ export default function PanicScreen() {
   const countdownSeconds = useEmergencyStore((state) => state.countdownSeconds);
   const isCountingDown = useEmergencyStore((state) => state.isCountingDown);
   const assignedAmbulance = useEmergencyStore((state) => state.assignedAmbulance);
-  const incident = useEmergencyStore((state) => state.incident);
 
   const startPanicCountdown = useEmergencyStore((state) => state.startPanicCountdown);
   const tickCountdown = useEmergencyStore((state) => state.tickCountdown);

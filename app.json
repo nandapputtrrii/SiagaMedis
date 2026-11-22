@@ -10,7 +10,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "SiagaMedis membutuhkan akses lokasi presisi untuk mengirimkan bantuan medis darurat dan memetakan faskes terdekat."
+        "NSLocationWhenInUseUsageDescription": "SiagaMedis membutuhkan akses lokasi presisi untuk mengirimkan bantuan medis darurat dan memetakan faskes terdekat.",
+        "NSCameraUsageDescription": "SiagaMedis membutuhkan akses kamera untuk memfoto dokumen rekam medis, kartu BPJS, dan surat rujukan ke sandbox Scoped Storage.",
+        "NSPhotoLibraryUsageDescription": "SiagaMedis membutuhkan akses galeri untuk mengimpor dokumen rekam medis dan berkas pemeriksaan ke sandbox Scoped Storage."
       }
     },
     "android": {
@@ -22,7 +24,10 @@
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -36,6 +41,13 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "SiagaMedis membutuhkan akses lokasi presisi untuk mengirimkan bantuan medis darurat dan memetakan faskes terdekat."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SiagaMedis membutuhkan akses galeri untuk mengimpor dokumen rekam medis dan berkas pemeriksaan ke sandbox Scoped Storage.",
+          "cameraPermission": "SiagaMedis membutuhkan akses kamera untuk memfoto dokumen rekam medis, kartu BPJS, dan surat rujukan ke sandbox Scoped Storage."
         }
       ]
     ]
